@@ -959,6 +959,37 @@
   - human4(2×2)는 보류합니다. 고장 난 '우리 꾸밈'으로 시험하면 이미 아는 사실만 확인하게 됩니다.
   - 순서: 꾸밈 수정(눈썹 덮어쓰기 해제 → 눈 색 → 수염 → 눈꺼풀 → 머리색) → '수정 전 / 수정 후 / 금손' 사람 평가(익숙함 클릭 포함, 아는 인물 위주).
 
+### 2026-10-06 12:37: 렌더러 고정 기본값 전수 점검 (메인, catdef 48행 DNA 디코드)
+
+집 묶음 경로(pilot_render → bundle_eval.accessory_compact, s=None)에서 사진과 무관하게 고정되는 값입니다. 표기는 '우리 → 금손 남 / 금손 여'(dev 51명)입니다.
+
+- **base_dna.txt(남성 기반 한 벌)에서 그대로 오는 값**
+  - eye_accessory: 35 → 155 / 101
+  - eyelashes: 242 → 69 / 98
+  - hair_type: straight 113 → wavy 섞임 125 / 130
+  - baldness: 금손 남성은 male_pattern이 섞여 있습니다.
+  - height: 117 → 149 / 146
+  - body_type, body_shape, bust: 금손과 템플릿이 다릅니다.
+  - **neck_length / neck_width: 우리는 neg이고, 여성 금손은 pos입니다(16/21, 11/21). 여성 목이 반대로 나옵니다.**
+  - mouth_open: 128 → 121 / 98
+- **accessory_compact 상수**
+  - gene_age: old_beauty_1 40 → 137 / 130
+  - body_hair: avg 0 → 남 sparse 159 / 여 avg 175. 수염 있는 남자도 그루터기가 없습니다.
+  - beard_push: 0
+  - 헤어 ft 유전자 5개: 0
+- 범주형 3개(눈꺼풀·코 옆선·귀 꺾임): 0. 이미 수정했습니다.
+- 눈 색: dark_brown 고정. 이제 eye_color 열로 들어갑니다.
+- 렌더 조건(DNA 밖)
+  - 표정: idle 기본 포즈
+  - 조명: environment_standard
+  - 나이: 0.30
+  - 카메라: camera_ft_face
+- **조치**
+  - '수정 후' 단계에 위 항목을 모두 금손 성별 최빈 템플릿 + 중앙값으로 넣습니다.
+  - body_hair는 수염 판정과 연동합니다.
+  - 렌더할 때마다 DNA 디코드 점검(decode_audit)을 자동으로 붙여, 항목별로 금손과 대조합니다.
+- EXPERT_DECOR가 실제 렌더 DNA에 들어갔는지는 집이 확인 중입니다.
+
 ## 12. 사용자 결정 (2026-10-06 아침)
 
 1. **최종 평가셋:** (b)로 결정했습니다.
