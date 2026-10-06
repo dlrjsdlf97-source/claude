@@ -1632,6 +1632,17 @@
   - Pixel3DMM 공식 빌드: PyTorch3D 0.7.9 빌드 성공, 공식 예제 재현 목표 약 21:30
   - scarlett·anne 교사 시트
 
+### 2026-10-06 19:14 — 사용자 결정: FLAME 2023 다운로드, RealDenseFace 사용 승인
+
+- 사용자가 FLAME 공식 사이트에 직접 로그인해 **FLAME 2023**(revised eye region, w/ and w/o jaw, 비상업 연구 라이선스)을 메인 PC에 받았습니다. Open 판은 받지 않았습니다.
+- **RealDenseFace**(LinzhouLi/RealDenseFace, NoW 0.82mm): LICENSE 파일이 없지만, 사용자가 사용 조건을 직접 확인한 뒤 개인 사용을 승인했습니다.
+  - 메인에서 별도 venv로 설치합니다. CUDA 확장 빌드가 필요합니다.
+- **비교 계획**
+  - 대상: MICA / Pixel3DMM / RealDenseFace
+  - 경로: 같은 입력, 같은 변환(FLAME → transfer → u-only shape_fit → 평균 맞춤)
+  - 순서: 금손 렌더 폐루프로 금손 방향 cos와 크기비를 보고 → W 30명 실제 사진으로 같은 사람을 나란히 놓은 시트를 만듭니다.
+  - FLAME 2023 → 2020 변환 처리는 기록합니다.
+
 ## 12. 사용자 결정 (2026-10-06 아침)
 
 1. **최종 평가셋:** (b)로 결정했습니다.
