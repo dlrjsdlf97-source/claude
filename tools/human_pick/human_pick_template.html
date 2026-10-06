@@ -1,0 +1,173 @@
+<title>닮은 얼굴 고르기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one person per screen — reference photo pinned left (top on phones), ten candidates in a grid, letter strip for jumping. */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --fg:#161b22; --muted:#5a6573; --line:#d5dbe2;
+  --accent:#1f5fbf; --accent-ink:#ffffff; --done:#2e7d4f; --warn:#a15c00;
+  --font-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1318; --surface:#171d24; --fg:#e7ecf2; --muted:#9aa6b4; --line:#2a333d;
+  --accent:#6aa3ff; --accent-ink:#0b1220; --done:#5cc48a; --warn:#e3a14a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1318; --surface:#171d24; --fg:#e7ecf2; --muted:#9aa6b4; --line:#2a333d;
+  --accent:#6aa3ff; --accent-ink:#0b1220; --done:#5cc48a; --warn:#e3a14a; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+h1{font-size:1.25rem;margin:0;text-wrap:balance}
+.hint{color:var(--muted);font-size:.9rem;margin:0}
+.strip{display:flex;flex-wrap:wrap;gap:6px}
+.strip button{font-family:var(--font-num);font-size:.85rem;min-width:2.1rem;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.strip button.done{border-color:var(--done);color:var(--done)}
+.strip button.cur{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.strip .sep{flex-basis:100%;height:0}
+.strip .lab{font-size:.8rem;color:var(--muted);letter-spacing:.04em;align-self:center;margin-right:2px}
+.stage{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start}
+@media (max-width:720px){.stage{grid-template-columns:1fr}}
+.ref{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);display:grid;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+@media (max-width:720px){.ref{position:static;grid-template-columns:120px 1fr;align-items:center}}
+.ref img{width:100%;border-radius:6px;display:block}
+.who{font-family:var(--font-num);font-size:2rem;font-weight:600;line-height:1}
+.who small{display:block;font-family:var(--font-ui);font-size:.8rem;font-weight:400;color:var(--muted);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cand{position:relative;padding:0;border:2px solid transparent;border-radius:8px;background:var(--surface);cursor:pointer;overflow:hidden;outline-offset:2px}
+.cand img{display:block;width:100%;height:auto}
+.cand .n{position:absolute;left:6px;top:6px;font-family:var(--font-num);font-weight:600;font-size:1.05rem;background:var(--surface);color:var(--fg);border-radius:5px;padding:0 7px;border:1px solid var(--line)}
+.cand.sel{border-color:var(--accent)}
+.cand.sel .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cand:focus-visible{outline:3px solid var(--accent)}
+.nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.status{font-size:.85rem;color:var(--muted)}
+.status.ok{color:var(--done)} .status.warn{color:var(--warn)}
+.answers{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px}
+.answers textarea{width:100%;box-sizing:border-box;font-family:var(--font-num);font-size:.9rem;min-height:3.2em;resize:vertical;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.empty{padding:24px;background:var(--surface);border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">닮은 얼굴 고르기</h1>
+      <p class="hint">왼쪽 실사진과 가장 닮은 후보를 하나 누르세요. 누르면 다음 인물로 넘어갑니다. 키보드 0–9로도 고를 수 있습니다.</p>
+    </div>
+    <span id="count" class="status"></span>
+  </header>
+  <nav class="strip" id="strip" aria-label="인물 목록"></nav>
+  <section class="stage" id="stage" hidden>
+    <aside class="ref">
+      <img id="refimg" alt="기준 실사진">
+      <div class="who" id="who"></div>
+    </aside>
+    <div class="grid" id="grid"></div>
+  </section>
+  <div class="empty" id="empty">평가 데이터를 불러오는 중입니다. 이 화면이 계속 보이면 페이지에 데이터가 들어 있지 않은 것입니다.</div>
+  <div class="nav">
+    <button class="btn" id="prev" type="button">← 이전</button>
+    <button class="btn" id="next" type="button">다음 →</button>
+    <span class="status" id="save"></span>
+  </div>
+  <section class="answers" aria-label="답 모음">
+    <strong>내 답</strong>
+    <textarea id="ans" readonly aria-label="답 문자열"></textarea>
+    <div class="nav">
+      <button class="btn primary" id="copy" type="button">답 복사</button>
+      <span class="status" id="copymsg">자동 저장이 안 되는 화면이면 이 답을 복사해 채팅에 붙여 주세요.</span>
+    </div>
+  </section>
+</div>
+
+<script type="application/json" id="data">/*__DATA__*/null</script>
+<script>
+(function(){
+  var DATA=null;
+  try{DATA=JSON.parse(document.getElementById('data').textContent)}catch(e){DATA=null}
+  if(!DATA||!DATA.rows){return}
+  var KEY='human-pick:'+(DATA.id||'h1');
+  var order=[];(DATA.sessions||[]).forEach(function(s){s.letters.forEach(function(l){order.push({l:l,s:s.name})})});
+  var picks={};try{picks=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){picks={}}
+  var cur=0;for(var i=0;i<order.length;i++){if(picks[order[i].l]===undefined){cur=i;break}}
+  var $=function(id){return document.getElementById(id)};
+  if(DATA.title){$('title').textContent=DATA.title;document.title=DATA.title}
+  $('empty').hidden=true;$('stage').hidden=false;
+  var db=null,dbState='pending';
+  function setSave(t,c){var el=$('save');el.textContent=t;el.className='status'+(c?' '+c:'')}
+  setSave('자동 저장 연결 중…');
+  if(window.claude&&window.claude.use){
+    window.claude.use('db').then(function(d){db=d;dbState=d?'on':'off';
+      setSave(d?'자동 저장 켜짐':'자동 저장 안 됨 — 아래 답을 복사해 주세요',d?'ok':'warn');
+    },function(){dbState='off';setSave('자동 저장 안 됨 — 아래 답을 복사해 주세요','warn')});
+  }else{dbState='off';setSave('자동 저장 안 됨 — 아래 답을 복사해 주세요','warn')}
+  var pending={};
+  function persist(l){
+    try{localStorage.setItem(KEY,JSON.stringify(picks))}catch(e){}
+    if(!db)return;
+    if(pending[l]){pending[l].again=true;return}
+    pending[l]={again:false};
+    var write=function(){
+      var v=picks[l];
+      db.doc('answers/'+l).set({letter:l,pick:v,at:new Date().toISOString()}).then(function(){
+        setSave('저장됨 · '+l+'='+v,'ok');
+        if(pending[l].again){pending[l].again=false;write()}else{delete pending[l]}
+      },function(err){delete pending[l];setSave('저장 실패('+(err&&err.code||'오류')+') — 아래 답을 복사해 주세요','warn')});
+    };write();
+  }
+  function ansText(){return order.filter(function(o){return picks[o.l]!==undefined}).map(function(o){return o.l+picks[o.l]}).join(' ')}
+  function renderStrip(){
+    var st=$('strip');st.textContent='';var last=null;
+    order.forEach(function(o,i){
+      if(o.s!==last){if(last!==null){var br=document.createElement('span');br.className='sep';st.appendChild(br)}
+        var lab=document.createElement('span');lab.className='lab';lab.textContent=o.s;st.appendChild(lab);last=o.s}
+      var b=document.createElement('button');b.type='button';b.id='jump-'+o.l;
+      b.textContent=o.l+(picks[o.l]!==undefined?picks[o.l]:'');
+      b.className=(picks[o.l]!==undefined?'done':'')+(i===cur?' cur':'');
+      b.addEventListener('click',function(){cur=i;render()});st.appendChild(b)});
+    var n=Object.keys(picks).filter(function(k){return order.some(function(o){return o.l===k})}).length;
+    $('count').textContent=n+' / '+order.length+' 완료';
+    $('ans').value=ansText();
+  }
+  function render(){
+    var o=order[cur],row=DATA.rows[o.l];
+    $('refimg').src=row.photo;
+    $('who').innerHTML='';$('who').appendChild(document.createTextNode(o.l));
+    var sm=document.createElement('small');sm.textContent=o.s+' · '+(cur+1)+'번째 / '+order.length;$('who').appendChild(sm);
+    var g=$('grid');g.textContent='';
+    row.cands.forEach(function(src,k){
+      var b=document.createElement('button');b.type='button';b.className='cand'+(picks[o.l]===k?' sel':'');b.id='cand-'+k;
+      b.setAttribute('aria-label',o.l+' 후보 '+k);
+      var im=document.createElement('img');im.src=src;im.alt='';im.loading='eager';b.appendChild(im);
+      var n=document.createElement('span');n.className='n';n.textContent=String(k);b.appendChild(n);
+      b.addEventListener('click',function(){choose(k)});g.appendChild(b)});
+    $('prev').disabled=cur===0;$('next').disabled=cur===order.length-1;
+    renderStrip();
+  }
+  var advTimer=null;
+  function choose(k){
+    var l=order[cur].l;picks[l]=k;persist(l);render();
+    clearTimeout(advTimer);
+    if(cur<order.length-1){advTimer=setTimeout(function(){cur++;render();window.scrollTo({top:0})},350)}
+  }
+  $('prev').addEventListener('click',function(){if(cur>0){cur--;render()}});
+  $('next').addEventListener('click',function(){if(cur<order.length-1){cur++;render()}});
+  document.addEventListener('keydown',function(e){
+    if(e.target&&e.target.tagName==='TEXTAREA')return;
+    if(/^[0-9]$/.test(e.key)){choose(Number(e.key))}
+    else if(e.key==='ArrowRight'){$('next').click()}else if(e.key==='ArrowLeft'){$('prev').click()}
+  });
+  $('copy').addEventListener('click',function(){
+    var t=ansText(),msg=$('copymsg');
+    var fb=function(){var ta=$('ans');ta.focus();ta.select();msg.textContent='선택해 두었습니다. 복사(Ctrl+C) 후 채팅에 붙여 주세요.'};
+    try{navigator.clipboard.writeText(t).then(function(){msg.textContent='복사했습니다. 채팅에 붙여 주세요.'},fb)}catch(e){fb()}
+  });
+  render();
+})();
+</script>
